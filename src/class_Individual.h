@@ -25,6 +25,11 @@ private:
   int m_pedigree_id = 0;
   
   void meiosis_dist_tree_internal(Individual* dest, int* dist) const;
+  void meiosis_dist_tree_threshold_internal(Individual* dest, int threshold, int* dist) const;
+  
+  void meiosis_radius_descendant_internal(int dist,
+                                          const int radius,
+                                          std::vector< std::tuple<int, int, int> >* family);
   
   bool m_dijkstra_visited = false;
   int m_dijkstra_distance = 0;
@@ -64,6 +69,9 @@ public:
   void unset_pedigree();
 
   int meiosis_dist_tree(Individual* dest) const;
+  int meiosis_dist_tree_threshold(Individual* dest, int threshold) const;
+  
+  std::vector< std::tuple<int, int, int> > meiotic_radius(int radius);
   
   std::vector<Individual*> calculate_path_to(Individual* dest) const;
   
@@ -95,6 +103,7 @@ public:
       const double prob_genealogical_error = 0.0);
   
   int get_haplotype_L1(Individual* dest) const;
+  int get_haplotype_L1_no_error(Individual* dest) const;
   
   void pass_autosomal_to_children(bool recursive, 
     const std::vector< std::vector<double> >& allele_conditional_cumdists_theta,

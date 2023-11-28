@@ -62,6 +62,54 @@ load_individuals <- function(pid, pid_dad, progress = TRUE, error_on_pid_not_fou
     .Call('_malan_load_individuals', PACKAGE = 'malan', pid, pid_dad, progress, error_on_pid_not_found)
 }
 
+#' Load haplotypes to individuals
+#' 
+#' Note that individuals loaded this way does not have information about generation.
+#' 
+#' @param population of individuals
+#' @param pid ID of male
+#' @param haplotypes - row `i` has `pid[i]` ID
+#' @param progress Show progress.
+#' 
+#' @export
+load_haplotypes <- function(population, pid, haplotypes, progress = TRUE) {
+    invisible(.Call('_malan_load_haplotypes', PACKAGE = 'malan', population, pid, haplotypes, progress))
+}
+
+#' Infer individual's generation number
+#' 
+#' Takes as input final generation, then moves up in pedigree and increments 
+#' generation number.
+#' 
+#' Note: Only works when all final generation individuals are provided.
+#' 
+#' @param final_generation Individuals in final generation
+#' 
+#' @export
+infer_generation <- function(final_generation) {
+    invisible(.Call('_malan_infer_generation', PACKAGE = 'malan', final_generation))
+}
+
+#' Set individual's generation number
+#' 
+#' Note that generation 0 is final, end generation. 
+#' 1 is second last generation etc.
+#' 
+#' @param individual Individual
+#' @param generation Generation to assign
+#' 
+#' @examples
+#' sim <- sample_geneology(100, 10)
+#' indv <- get_individual(sim$population, 1)
+#' get_generation(indv)
+#' set_generation(indv, 100)
+#' get_generation(indv)
+#' 
+#' @export
+set_generation <- function(individual, generation) {
+    invisible(.Call('_malan_set_generation', PACKAGE = 'malan', individual, generation))
+}
+
 #' Simulate a geneology with constant population size.
 #' 
 #' This function simulates a geneology where the last generation has `population_size` individuals. 
@@ -710,6 +758,8 @@ count_haplotype_occurrences_pedigree <- function(pedigree, haplotype, generation
 #' End generation is generation 0.
 #' Second last generation is 1. 
 #' And so on.
+#' @param error_on_no_haplotype raise error or silently ignore individuals 
+#' with no haplotype
 #' 
 #' @return Matrix with information about matching individuals. 
 #' Columns in order: meioses (meiotic distance to `suspect`), 
@@ -721,8 +771,8 @@ count_haplotype_occurrences_pedigree <- function(pedigree, haplotype, generation
 #' @seealso [count_haplotype_occurrences_individuals()].
 #'
 #' @export
-pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists <- function(suspect, generation_upper_bound_in_result = -1L) {
-    .Call('_malan_pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists', PACKAGE = 'malan', suspect, generation_upper_bound_in_result)
+pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists <- function(suspect, generation_upper_bound_in_result = -1L, error_on_no_haplotype = TRUE) {
+    .Call('_malan_pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists', PACKAGE = 'malan', suspect, generation_upper_bound_in_result, error_on_no_haplotype)
 }
 
 #' Information about almost matching individuals
@@ -767,6 +817,37 @@ pedigree_haplotype_near_matches_meiosis <- function(suspect, max_dist, generatio
 #' @export
 meiotic_dist <- function(ind1, ind2) {
     .Call('_malan_meiotic_dist', PACKAGE = 'malan', ind1, ind2)
+}
+
+#' Meiotic distance between two individuals (with threshold)
+#' 
+#' Get the number of meioses between two individuals.
+#' Note, that pedigrees must first have been inferred by [build_pedigrees()].
+#' 
+#' @param ind1 Individual 1
+#' @param ind2 Individual 2
+#' @param threshold Max search radius, if exceeding, return -1
+#' 
+#' @return Number of meioses between `ind1` and `ind2` if they are in the same pedigree, else -1.
+#' 
+#' @export
+meiotic_dist_threshold <- function(ind1, ind2, threshold) {
+    .Call('_malan_meiotic_dist_threshold', PACKAGE = 'malan', ind1, ind2, threshold)
+}
+
+#' Meiotic radius
+#' 
+#' Get all individual IDs within a meiotic radius
+#' Note, that pedigrees must first have been inferred by [build_pedigrees()].
+#' 
+#' @param ind Individual
+#' @param radius Max radius
+#' 
+#' @return Matrix with ID and meiotic radius
+#' 
+#' @export
+meiotic_radius <- function(ind, radius) {
+    .Call('_malan_meiotic_radius', PACKAGE = 'malan', ind, radius)
 }
 
 #' Convert haplotypes to hashes (integers)
@@ -1171,6 +1252,7 @@ pedigree_size_generation <- function(pedigree, generation_upper_bound_in_result 
 #' @param individuals Individuals to consider as possible contributors and thereby get information from.
 #' @param donor1 Contributor1/donor 1
 #' @param donor2 Contributor2/donor 2
+#' @param include_genealogy_info Include information about meiotic distances and family info
 #' @return A list with mixture information about the mixture \code{donor1}+\code{donor2}+\code{donor3} from \code{individuals}
 #' 
 #' @seealso \code{\link{mixture_info_by_individuals_3pers}}, 
@@ -1178,8 +1260,8 @@ pedigree_size_generation <- function(pedigree, generation_upper_bound_in_result 
 #'          \code{\link{mixture_info_by_individuals_5pers}}
 #' 
 #' @export
-mixture_info_by_individuals_2pers <- function(individuals, donor1, donor2) {
-    .Call('_malan_mixture_info_by_individuals_2pers', PACKAGE = 'malan', individuals, donor1, donor2)
+mixture_info_by_individuals_2pers <- function(individuals, donor1, donor2, include_genealogy_info = TRUE) {
+    .Call('_malan_mixture_info_by_individuals_2pers', PACKAGE = 'malan', individuals, donor1, donor2, include_genealogy_info)
 }
 
 #' Mixture information about 3 persons' mixture of donor1, donor2 and donor3.

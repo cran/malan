@@ -6,7 +6,8 @@
 \usage{
 pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists(
   suspect,
-  generation_upper_bound_in_result = -1L
+  generation_upper_bound_in_result = -1L,
+  error_on_no_haplotype = TRUE
 )
 }
 \arguments{
@@ -18,6 +19,9 @@ generation 0, 1, ... generation_upper_bound_in_result.
 End generation is generation 0.
 Second last generation is 1.
 And so on.}
+
+\item{error_on_no_haplotype}{raise error or silently ignore individuals
+with no haplotype}
 }
 \value{
 Matrix with information about matching individuals.

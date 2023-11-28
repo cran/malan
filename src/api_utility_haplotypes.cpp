@@ -614,6 +614,8 @@ int count_haplotype_occurrences_pedigree(Rcpp::XPtr<Pedigree> pedigree,
 //' End generation is generation 0.
 //' Second last generation is 1. 
 //' And so on.
+//' @param error_on_no_haplotype raise error or silently ignore individuals 
+//' with no haplotype
 //' 
 //' @return Matrix with information about matching individuals. 
 //' Columns in order: meioses (meiotic distance to `suspect`), 
@@ -627,7 +629,8 @@ int count_haplotype_occurrences_pedigree(Rcpp::XPtr<Pedigree> pedigree,
 //' @export
 // [[Rcpp::export]]
 Rcpp::IntegerMatrix pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists(const Rcpp::XPtr<Individual> suspect, 
-                                                                            int generation_upper_bound_in_result = -1) {
+                                                                            int generation_upper_bound_in_result = -1, 
+                                                                            bool error_on_no_haplotype = true) {
 
   if (!(suspect->is_haplotype_set())) {
     Rcpp::stop("Haplotype not yet set for suspect.");
@@ -657,13 +660,21 @@ Rcpp::IntegerMatrix pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists(cons
     }
 
     if (!(dest->is_haplotype_set())) {
-      Rcpp::stop("Haplotype not yet set for dest.");
+      if (error_on_no_haplotype) {
+        Rcpp::stop("Haplotype not yet set for dest.");
+      } else {
+        continue;
+      }
     }
         
     std::vector<int> dest_h = dest->get_haplotype();
     
     if (dest_h.size() != h.size()) {
-      Rcpp::stop("haplotype and dest_h did not have same number of loci");
+      if (error_on_no_haplotype) {
+        Rcpp::stop("haplotype and dest_h did not have same number of loci");
+      } else {
+        continue;
+      }
     }
     
     if (dest_h == h) {
@@ -676,18 +687,23 @@ Rcpp::IntegerMatrix pedigree_haplotype_matches_in_pedigree_meiosis_L1_dists(cons
       int max_L1 = 0;
       
       //Rcpp::Rcout << "  ";
-      
-      for (auto intermediate_node : path) { 
-        //Rcpp::Rcout << intermediate_node->get_pid();
-        
-        int d = suspect->get_haplotype_L1(intermediate_node);
-        
-        if (d > max_L1) {
-          max_L1 = d;
-          //Rcpp::Rcout << "!";
+
+      if (error_on_no_haplotype) {
+        for (auto intermediate_node : path) { 
+          int d = suspect->get_haplotype_L1(intermediate_node);
+          
+          if (d > max_L1) {
+            max_L1 = d;
+          }
         }
-        
-        //Rcpp::Rcout << " ";
+      } else {
+        for (auto intermediate_node : path) { 
+          int d = suspect->get_haplotype_L1_no_error(intermediate_node);
+          
+          if (d > max_L1) {
+            max_L1 = d;
+          }
+        }
       }
       
       //Rcpp::Rcout << std::endl;      
@@ -837,6 +853,53 @@ int meiotic_dist(Rcpp::XPtr<Individual> ind1, Rcpp::XPtr<Individual> ind2) {
   return ind1->meiosis_dist_tree(ind2);
 }
 
+//' Meiotic distance between two individuals (with threshold)
+//' 
+//' Get the number of meioses between two individuals.
+//' Note, that pedigrees must first have been inferred by [build_pedigrees()].
+//' 
+//' @param ind1 Individual 1
+//' @param ind2 Individual 2
+//' @param threshold Max search radius, if exceeding, return -1
+//' 
+//' @return Number of meioses between `ind1` and `ind2` if they are in the same pedigree, else -1.
+//' 
+//' @export
+// [[Rcpp::export]]
+int meiotic_dist_threshold(Rcpp::XPtr<Individual> ind1, Rcpp::XPtr<Individual> ind2, int threshold) {
+ return ind1->meiosis_dist_tree_threshold(ind2, threshold);
+}
+
+//' Meiotic radius
+//' 
+//' Get all individual IDs within a meiotic radius
+//' Note, that pedigrees must first have been inferred by [build_pedigrees()].
+//' 
+//' @param ind Individual
+//' @param radius Max radius
+//' 
+//' @return Matrix with ID and meiotic radius
+//' 
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix meiotic_radius(Rcpp::XPtr<Individual> ind, int radius) {
+  std::vector< std::tuple<int, int, int> > family = ind->meiotic_radius(radius);
+  
+  size_t n = family.size();
+  
+  Rcpp::IntegerMatrix ret(n, 3);
+  
+  for (size_t i = 0; i < n; ++i) {
+    std::tuple<int, int, int> p = family[i];
+    ret(i, 0) = std::get<0>(p);
+    ret(i, 1) = std::get<1>(p);
+    ret(i, 2) = std::get<2>(p);
+  }
+  
+  Rcpp::colnames(ret) = Rcpp::CharacterVector::create("pid", "dist", "generation");
+  
+  return ret;
+}
 
 //' Convert haplotypes to hashes (integers)
 //' 
